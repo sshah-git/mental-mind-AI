@@ -2,7 +2,7 @@
 
 A private, AI-assisted journaling app designed for personal reflection. Write freely, track your emotional patterns, and receive thoughtful AI responses — all in a clean, distraction-free interface.
 
-> **This is a personal reflection tool, not a medical service.** In crisis? Call [988](tel:988) (US) or [116 123](tel:116123) (UK).
+> **This is a personal reflection tool, not a medical service.
 
 ---
 
