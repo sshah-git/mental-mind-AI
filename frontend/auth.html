@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mentalmind — Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="auth.css">
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      const pref = localStorage.getItem('mm_theme') || 'light';
+      let actual = pref;
+      if (pref === 'system') {
+        actual = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = actual;
+    })();
+  </script>
+</head>
+<body>
+  <div class="auth-layout">
+
+    <!-- Left panel: branding -->
+    <div class="auth-brand">
+      <div class="brand-inner">
+        <div class="brand-logo">
+          <span class="logo-mark">m</span>
+          <span class="logo-text">mentalmind</span>
+        </div>
+        <h1 class="brand-headline">A quiet space<br>to think on paper.</h1>
+        <p class="brand-sub">Journal freely, reflect deeply, and notice patterns over time — with a little help from AI.</p>
+
+        <ul class="brand-features">
+          <li><span class="feat-icon">✦</span> AI reflections after every entry</li>
+          <li><span class="feat-icon">✦</span> Emotion tracking &amp; pattern detection</li>
+          <li><span class="feat-icon">✦</span> Guided prompts for hard moments</li>
+          <li><span class="feat-icon feat-premium">★</span> Weekly PDF reports <span class="premium-chip">Premium</span></li>
+          <li><span class="feat-icon feat-premium">★</span> Streaks &amp; gentle reminders <span class="premium-chip">Premium</span></li>
+        </ul>
+
+        <p class="brand-disclaimer">
+          This tool is not therapy. In crisis?
+          <a href="tel:988">988</a> (US) · <a href="tel:116123">116 123</a> (UK)
+        </p>
+      </div>
+    </div>
+
+    <!-- Right panel: form -->
+    <div class="auth-form-panel">
+      <div class="auth-form-card">
+
+        <!-- Tab toggle -->
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" id="loginTab" role="tab"
+            aria-selected="true" aria-controls="loginForm" onclick="showLogin()">Sign in</button>
+          <button class="auth-tab" id="signupTab" role="tab"
+            aria-selected="false" aria-controls="signupForm" onclick="showSignup()">Create account</button>
+        </div>
+
+        <!-- Login form -->
+        <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" class="form-input"
+              placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <div class="input-with-toggle">
+              <input type="password" id="loginPassword" class="form-input"
+                placeholder="••••••••" required autocomplete="current-password">
+              <button type="button" class="pw-toggle" onclick="togglePw('loginPassword', this)"
+                aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <div id="loginError" class="form-error" role="alert" style="display:none;"></div>
+          <button type="submit" class="btn-primary" id="loginBtn">Sign in</button>
+        </form>
+
+        <!-- Signup form -->
+        <form id="signupForm" class="auth-form" onsubmit="handleSignup(event)" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" for="signupName">
+              Your name <span class="form-optional">(optional)</span>
+            </label>
+            <input type="text" id="signupName" class="form-input"
+              placeholder="First name" autocomplete="given-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" class="form-input"
+              placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signupPassword">
+              Password <span class="form-optional">(min 8 characters)</span>
+            </label>
+            <div class="input-with-toggle">
+              <input type="password" id="signupPassword" class="form-input"
+                placeholder="••••••••" required autocomplete="new-password">
+              <button type="button" class="pw-toggle" onclick="togglePw('signupPassword', this)"
+                aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <div id="signupError" class="form-error" role="alert" style="display:none;"></div>
+          <button type="submit" class="btn-primary" id="signupBtn">Create account</button>
+          <p class="form-legal">By creating an account you agree that this is a personal reflection tool, not a medical service.</p>
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+  <script src="auth.js"></script>
+</body>
+</html>

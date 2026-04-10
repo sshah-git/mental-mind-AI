@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mentalmind</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#166534">
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      const t = localStorage.getItem('mm_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+<!-- Offline Banner -->
+<div id="offlineBanner" class="offline-banner" style="display:none;">
+  You're offline — entries will sync when you reconnect.
+</div>
+
+<!-- ── Toast Container ── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── Upgrade Modal ── -->
+<div id="upgradeOverlay" class="modal-overlay" style="display:none;"></div>
+<div id="upgradeModal" class="upgrade-modal" style="display:none;">
+  <button class="modal-close-btn" onclick="closeUpgradeModal()">✕</button>
+  <div class="upgrade-icon">★</div>
+  <h2 class="upgrade-title">Upgrade to Premium</h2>
+  <p class="upgrade-sub">Unlock your full journaling experience.</p>
+  <ul class="upgrade-features">
+    <li><span class="uf-check">✦</span> Weekly PDF reports</li>
+    <li><span class="uf-check">✦</span> Clinician-ready export</li>
+    <li><span class="uf-check">✦</span> Streak tracking &amp; reminders</li>
+    <li><span class="uf-check">✦</span> Private tags &amp; advanced filters</li>
+    <li><span class="uf-check">✦</span> AI-powered weekly insights</li>
+    <li><span class="uf-check">✦</span> Calendar recovery blocks</li>
+  </ul>
+  <button class="upgrade-cta-btn" onclick="upgradeAccount()" id="upgradeCta">Upgrade — it's free to try</button>
+  <p class="upgrade-note">Demo: upgrade is instant for testing purposes.</p>
+</div>
+
+<!-- ── Onboarding Modal ── -->
+<div id="onboardingOverlay" class="modal-overlay" style="display:none;">
+  <div class="onboarding-modal">
+    <div class="onboarding-progress">
+      <span class="prog-dot active" data-step="1"></span>
+      <span class="prog-dot" data-step="2"></span>
+      <span class="prog-dot" data-step="3"></span>
+      <span class="prog-dot" data-step="4"></span>
+    </div>
+    <div class="ob-step active" id="ob-step-1">
+      <h2 class="ob-title">Welcome to mentalmind</h2>
+      <p class="ob-subtitle">Two minutes to personalise your experience.</p>
+      <p class="ob-label">What brings you here? <span class="ob-optional">(pick any)</span></p>
+      <div class="ob-chips" id="obGoalChips">
+        <button class="ob-chip" data-val="stress">Stress &amp; anxiety</button>
+        <button class="ob-chip" data-val="reflection">Self-reflection</button>
+        <button class="ob-chip" data-val="mood">Mood tracking</button>
+        <button class="ob-chip" data-val="decisions">Better decisions</button>
+        <button class="ob-chip" data-val="emotions">Processing emotions</button>
+        <button class="ob-chip" data-val="curious">Just curious</button>
+      </div>
+    </div>
+    <div class="ob-step" id="ob-step-2">
+      <p class="ob-label">How would you like reflections to feel?</p>
+      <div class="tone-options">
+        <button class="tone-option" data-val="gentle" onclick="selectTone(this)">
+          <span class="tone-name">Gentle</span>
+          <span class="tone-desc">Warm and validating — take it easy on me</span>
+        </button>
+        <button class="tone-option" data-val="balanced" onclick="selectTone(this)">
+          <span class="tone-name">Balanced</span>
+          <span class="tone-desc">Warm but clear — a mix of both</span>
+        </button>
+        <button class="tone-option" data-val="direct" onclick="selectTone(this)">
+          <span class="tone-name">Direct</span>
+          <span class="tone-desc">Clear and focused — skip the softness</span>
+        </button>
+      </div>
+    </div>
+    <div class="ob-step" id="ob-step-3">
+      <p class="ob-label">Any words or topics you'd prefer we avoid?</p>
+      <p class="ob-hint">Optional — e.g. "failure", "should", "weakness"</p>
+      <input type="text" id="obTriggerWords" class="ob-input" placeholder="e.g. failure, should, weakness">
+    </div>
+    <div class="ob-step" id="ob-step-4">
+      <p class="ob-label">What matters most to you right now?</p>
+      <p class="ob-hint">Optional — your values or goals</p>
+      <textarea id="obValues" class="ob-textarea" rows="3"
+        placeholder="e.g. reduce anxiety, feel more present, process grief"></textarea>
+    </div>
+    <div class="ob-nav">
+      <button id="obBackBtn" class="ob-back" onclick="obPrev()">← Back</button>
+      <button id="obNextBtn" class="ob-next" onclick="obNext()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     APP LAYOUT
+═══════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ── Sidebar (desktop) ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo-mark">m</span>
+        <span class="sidebar-logo-text">mentalmind</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+      <button class="nav-item active" data-page="journal" onclick="navigateTo('journal')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Journal
+      </button>
+      <button class="nav-item" data-page="history" onclick="navigateTo('history')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </button>
+      <button class="nav-item" data-page="insights" onclick="navigateTo('insights')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Insights
+        <span class="nav-premium-dot" id="insightsPremiumDot" title="Premium"></span>
+      </button>
+      <button class="nav-item" data-page="tasks" onclick="navigateTo('tasks')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        My Steps
+      </button>
+      <button class="nav-item" data-page="settings" onclick="navigateTo('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="navigateTo('settings')" title="Account settings">
+        <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebarUserName">Loading…</div>
+          <div class="sidebar-user-tier" id="sidebarUserTier">Free plan</div>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="cycleTheme()" title="Toggle theme" id="themeToggleBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Content Area ── -->
+  <div class="content-area">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <div class="mobile-brand">
+        <span class="sidebar-logo-mark">m</span>
+        <span class="sidebar-logo-text">mentalmind</span>
+      </div>
+      <div class="mobile-header-right">
+        <span id="mobileStreakBadge" class="streak-badge" style="display:none;"></span>
+        <button class="icon-btn" onclick="cycleTheme()" title="Toggle theme">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="mobileThemeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Safety Banner -->
+    <div class="safety-banner">
+      This tool is not therapy. In crisis:
+      <a href="tel:988" class="crisis-link">988 (US)</a><span class="separator">·</span>
+      <a href="tel:116123" class="crisis-link">116 123 (UK)</a><span class="separator">·</span>
+      <a href="https://findahelpline.com" target="_blank" rel="noopener" class="crisis-link">Find local help →</a>
+    </div>
+
+    <!-- ═══════════════ PAGE CONTENT ═══════════════ -->
+    <div class="page-content">
+
+      <!-- Banners (shown above active page) -->
+      <div id="patternBanner" class="pattern-banner" style="display:none;">
+        <span class="pattern-icon">◎</span>
+        <span id="patternMessage"></span>
+      </div>
+      <div id="reminderBanner" class="reminder-banner" style="display:none;">
+        <span id="reminderText"></span>
+        <button class="reminder-dismiss" onclick="dismissReminder()">✕</button>
+      </div>
+
+      <!-- ──────────────────────────────────
+           PAGE: Journal
+      ────────────────────────────────── -->
+      <div id="page-journal" class="page active">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title" id="journalGreeting">Good evening</h1>
+              <p class="page-subtitle">A quiet space to think on paper.</p>
+            </div>
+            <span id="desktopStreakBadge" class="streak-badge" style="display:none;"></span>
+          </div>
+        </div>
+
+        <div class="card main-card">
+          <!-- Tab Bar -->
+          <div class="tab-bar" role="tablist">
+            <button class="tab-btn active" role="tab" onclick="showTab('free')"    id="tab-free">Free Write</button>
+            <button class="tab-btn"        role="tab" onclick="showTab('prompts')" id="tab-prompts">Prompts</button>
+            <button class="tab-btn"        role="tab" onclick="showTab('checkin')" id="tab-checkin">Check-in</button>
+          </div>
+
+          <!-- Free Write -->
+          <div id="panel-free" class="tab-panel">
+            <div class="personalized-prompt-row" id="personalizedPromptRow" style="display:none;">
+              <span class="pp-label">Suggested prompt</span>
+              <p id="personalizedPromptText" class="pp-text"></p>
+              <button class="pp-use-btn" onclick="usePersonalizedPrompt()">Use this</button>
+              <button class="pp-skip-btn" onclick="dismissPersonalizedPrompt()">✕</button>
+            </div>
+            <textarea id="freeContent" class="journal-textarea" rows="8"
+              placeholder="Write what's on your mind…"></textarea>
+            <button class="pp-generate-btn" onclick="loadPersonalizedPrompt()" id="ppGenBtn">
+              ✦ Generate a prompt for me
+            </button>
+          </div>
+
+          <!-- Prompts -->
+          <div id="panel-prompts" class="tab-panel" style="display:none;">
+            <p class="tab-hint">Choose a feeling, then pick a prompt.</p>
+            <div class="emotion-chips">
+              <button class="chip" data-emotion="overwhelmed" onclick="selectEmotion(this)">Overwhelmed</button>
+              <button class="chip" data-emotion="burnout"     onclick="selectEmotion(this)">Burnout</button>
+              <button class="chip" data-emotion="anxiety"     onclick="selectEmotion(this)">Anxiety</button>
+              <button class="chip" data-emotion="decision"    onclick="selectEmotion(this)">Decision</button>
+              <button class="chip" data-emotion="self-doubt"  onclick="selectEmotion(this)">Self-doubt</button>
+              <button class="chip" data-emotion="grief"       onclick="selectEmotion(this)">Grief</button>
+              <button class="chip" data-emotion="gratitude"   onclick="selectEmotion(this)">Gratitude</button>
+            </div>
+            <div id="promptCards" class="prompt-cards" style="display:none;"></div>
+            <textarea id="promptContent" class="journal-textarea" rows="7"
+              placeholder="Write your response here…" style="display:none;"></textarea>
+            <input type="hidden" id="selectedPromptId">
+            <input type="hidden" id="selectedEmotion">
+          </div>
+
+          <!-- Check-in -->
+          <div id="panel-checkin" class="tab-panel" style="display:none;">
+            <div id="checkinLoading" class="checkin-loading">
+              <span class="loading-dot"></span> Loading your check-in…
+            </div>
+            <div id="checkinContent" style="display:none;">
+              <p class="checkin-context" id="checkinContext"></p>
+              <p class="checkin-question" id="checkinQuestion"></p>
+              <textarea id="checkinResponse" class="journal-textarea" rows="7"
+                placeholder="Take your time. Write as much or as little as feels right."></textarea>
+            </div>
+          </div>
+
+          <!-- Energy -->
+          <div class="energy-row">
+            <label class="energy-label">Energy level</label>
+            <div class="energy-options">
+              <button class="energy-btn" data-val="1" onclick="selectEnergy(this)">1</button>
+              <button class="energy-btn" data-val="2" onclick="selectEnergy(this)">2</button>
+              <button class="energy-btn" data-val="3" onclick="selectEnergy(this)">3</button>
+              <button class="energy-btn" data-val="4" onclick="selectEnergy(this)">4</button>
+              <button class="energy-btn" data-val="5" onclick="selectEnergy(this)">5</button>
+            </div>
+            <span class="energy-hint">low → high</span>
+          </div>
+
+          <!-- Submit -->
+          <button class="submit-btn" onclick="submitEntry()" id="submitBtn">Reflect →</button>
+          <p class="entry-reminder">Not therapy · Not a crisis service · Your data stays private</p>
+
+          <!-- Reflection Section -->
+          <div id="reflectionSection" class="reflection-section" style="display:none;">
+            <div class="reflection-body">
+              <p class="reflection-label">Reflection</p>
+              <p id="reflectionText" class="reflection-text"></p>
+              <p id="templateBadge" class="template-badge" style="display:none;"></p>
+              <div class="emotion-tag-row" id="tagRow" style="display:none;">
+                <span class="tag-label">Themes</span>
+                <div id="tagDisplay" class="tag-chips"></div>
+              </div>
+            </div>
+            <div class="feedback-row">
+              <span class="feedback-label">Does this resonate?</span>
+              <button class="feedback-btn" onclick="sendFeedback('helpful')"   id="fb-helpful">Agree</button>
+              <button class="feedback-btn" onclick="sendFeedback('not_quite')" id="fb-not_quite">Not quite</button>
+              <button class="feedback-btn expand-btn" onclick="startExpand()"  id="fb-expand">Expand →</button>
+            </div>
+            <div id="followupThread" class="followup-thread" style="display:none;"></div>
+            <div class="next-step-row" id="nextStepRow" style="display:none;">
+              <span class="next-step-label">Would you like a next step?</span>
+              <button class="next-step-btn" onclick="showNextStepPrompt()">Yes, show me</button>
+              <button class="next-step-btn secondary" onclick="dismissNextStep()">Skip</button>
+            </div>
+            <div id="nextStepPrompt" class="next-step-prompt" style="display:none;"></div>
+            <button id="suggestTaskBtn" class="suggest-task-btn" onclick="suggestTask()" style="display:none;">
+              + Suggest a small action
+            </button>
+            <div class="micro-task-row" id="microTaskRow" style="display:none;">
+              <span class="micro-task-label">One small step</span>
+              <p id="microTaskText" class="micro-task-text"></p>
+              <div class="micro-task-actions">
+                <button class="micro-task-btn" onclick="saveTask()">Save it</button>
+                <button class="micro-task-btn secondary" onclick="dismissTask()">Skip</button>
+              </div>
+            </div>
+            <div id="calendarRow" class="calendar-row" style="display:none;">
+              <span class="calendar-label">Your energy is low — schedule some recovery time?</span>
+              <button class="calendar-btn" onclick="requirePremium(downloadCalendarBlock)">Add to calendar</button>
+              <button class="calendar-btn secondary" onclick="dismissCalendar()">Skip</button>
+            </div>
+          </div><!-- /reflectionSection -->
+        </div><!-- /card -->
+      </div><!-- /page-journal -->
+
+      <!-- ──────────────────────────────────
+           PAGE: History
+      ────────────────────────────────── -->
+      <div id="page-history" class="page">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">Past Entries</h1>
+              <p class="page-subtitle">Browse and search your journal.</p>
+            </div>
+            <button class="btn-primary" onclick="loadEntries()" id="loadEntriesBtn">Load entries</button>
+          </div>
+        </div>
+
+        <div class="history-filters" id="historyFilters" style="display:none;">
+          <input type="search" id="searchInput" class="search-input"
+            placeholder="Search entries…" oninput="filterEntries()">
+          <div class="filter-tags" id="filterTags"></div>
+          <div class="adv-filter-toggle">
+            <button class="adv-toggle-btn" onclick="toggleAdvFilters()">Advanced filters ▾</button>
+          </div>
+          <div id="advFilters" class="adv-filters" style="display:none;">
+            <div class="adv-row">
+              <label class="adv-label">From</label>
+              <input type="date" id="filterFrom" class="adv-date" oninput="filterEntries()">
+              <label class="adv-label">to</label>
+              <input type="date" id="filterTo" class="adv-date" oninput="filterEntries()">
+            </div>
+            <div class="adv-row">
+              <label class="adv-label">Energy</label>
+              <div class="adv-energy-opts">
+                <button class="adv-energy-btn selected" data-val="" onclick="selectEnergyFilter(this, '')">All</button>
+                <button class="adv-energy-btn" data-val="1" onclick="selectEnergyFilter(this, '1')">1</button>
+                <button class="adv-energy-btn" data-val="2" onclick="selectEnergyFilter(this, '2')">2</button>
+                <button class="adv-energy-btn" data-val="3" onclick="selectEnergyFilter(this, '3')">3</button>
+                <button class="adv-energy-btn" data-val="4" onclick="selectEnergyFilter(this, '4')">4</button>
+                <button class="adv-energy-btn" data-val="5" onclick="selectEnergyFilter(this, '5')">5</button>
+              </div>
+            </div>
+            <div class="adv-row">
+              <label class="toggle-label small">
+                <input type="checkbox" id="showPrivate" onchange="filterEntries()" checked>
+                <span class="toggle-switch sm"></span>
+                <span class="toggle-text">Show private tags</span>
+              </label>
+            </div>
+            <button class="adv-clear-btn" onclick="clearAdvFilters()">Clear filters</button>
+          </div>
+        </div>
+
+        <div id="historyList" class="history-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">📖</div>
+            <p>Click "Load entries" to view your journal history.</p>
+          </div>
+        </div>
+      </div><!-- /page-history -->
+
+      <!-- ──────────────────────────────────
+           PAGE: Insights
+      ────────────────────────────────── -->
+      <div id="page-insights" class="page">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">Insights</h1>
+              <p class="page-subtitle">Patterns and trends across your entries.</p>
+            </div>
+            <span class="badge-premium">Premium</span>
+          </div>
+        </div>
+
+        <!-- Shown for free users -->
+        <div id="insightsPremiumGate" class="premium-gate" style="display:none;">
+          <div class="premium-gate-icon">★</div>
+          <h3>Weekly Insights</h3>
+          <p>Discover emotional patterns, recurring themes, and trends across your journal — available on Premium.</p>
+          <button class="premium-gate-btn" onclick="openUpgradeModal()">Upgrade to Premium</button>
+        </div>
+
+        <!-- Shown for premium users -->
+        <div id="insightsPremiumContent" style="display:none;">
+          <!-- Streak card -->
+          <div class="streak-card" id="streakCard" style="display:none;">
+            <span class="streak-flame">🔥</span>
+            <div>
+              <div class="streak-info">
+                <span class="streak-number" id="streakNumber">0</span>
+                <span class="streak-unit">day streak</span>
+              </div>
+            </div>
+            <p class="streak-message" id="streakMessage"></p>
+          </div>
+
+          <!-- Insights Card -->
+          <div class="insights-card">
+            <div class="insights-header">
+              <span class="insights-title">Weekly Insights</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="insights-disclaimer">Self-reflection only</span>
+                <button class="insights-refresh-btn" onclick="loadInsights()">Refresh</button>
+              </div>
+            </div>
+            <div id="insightsBody" class="insights-body">
+              <div class="empty-state">
+                <p>Click Refresh to generate insights from your entries.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export Card -->
+          <div class="export-card">
+            <div class="export-card-header">
+              <p class="export-card-title">Export your data</p>
+            </div>
+            <div class="export-row">
+              <button class="export-full-btn" onclick="downloadWeeklyReport()">⤓ Weekly PDF</button>
+              <button class="export-full-btn secondary" onclick="downloadClinicianExport()">⤓ Clinician export</button>
+            </div>
+            <p class="export-note">Generated on-demand, never stored on our servers. Requires fpdf2 on the backend.</p>
+          </div>
+        </div>
+      </div><!-- /page-insights -->
+
+      <!-- ──────────────────────────────────
+           PAGE: Tasks
+      ────────────────────────────────── -->
+      <div id="page-tasks" class="page">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">My Small Steps</h1>
+              <p class="page-subtitle">Actions saved from your reflections.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadTasks()" style="flex-shrink:0;">Refresh</button>
+          </div>
+        </div>
+
+        <div class="tasks-card card">
+          <div id="tasksList" class="tasks-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">✓</div>
+              <p>No pending steps. Add one from your next reflection.</p>
+            </div>
+          </div>
+        </div>
+      </div><!-- /page-tasks -->
+
+      <!-- ──────────────────────────────────
+           PAGE: Settings
+      ────────────────────────────────── -->
+      <div id="page-settings" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+        </div>
+
+        <!-- Account -->
+        <div class="settings-section">
+          <div class="settings-section-title">Account</div>
+          <div class="account-block">
+            <div class="account-card">
+              <div class="account-avatar" id="settingsAvatar">?</div>
+              <div>
+                <div class="account-name" id="settingsName">—</div>
+                <div class="account-email" id="settingsEmail">—</div>
+                <div class="account-tier-row">
+                  <span id="settingsTierBadge" class="badge-free">Free</span>
+                </div>
+              </div>
+            </div>
+            <div class="account-actions">
+              <button class="account-upgrade-btn" id="settingsUpgradeBtn" onclick="openUpgradeModal()">★ Upgrade to Premium</button>
+              <button class="account-signout-btn" onclick="signOut()">Sign out</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-section">
+          <div class="settings-section-title">Appearance</div>
+          <div class="appearance-block">
+            <div class="theme-switcher">
+              <button class="theme-btn" data-t="light" onclick="setTheme('light')" id="themeLight">
+                ☀ Light
+              </button>
+              <button class="theme-btn" data-t="dark" onclick="setTheme('dark')" id="themeDark">
+                ☽ Dark
+              </button>
+              <button class="theme-btn" data-t="system" onclick="setTheme('system')" id="themeSystem">
+                ⬡ System
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="settings-section">
+          <div class="settings-section-title">AI Preferences</div>
+          <div class="prefs-block">
+            <div class="settings-field">
+              <label class="settings-field-label">Reflection tone</label>
+              <div class="tone-options compact" id="settingsToneOptions">
+                <button class="tone-option" data-val="gentle" onclick="selectPrefTone(this)"><span class="tone-name">Gentle</span></button>
+                <button class="tone-option" data-val="balanced" onclick="selectPrefTone(this)"><span class="tone-name">Balanced</span></button>
+                <button class="tone-option" data-val="direct" onclick="selectPrefTone(this)"><span class="tone-name">Direct</span></button>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Words to avoid</label>
+              <div class="settings-field-hint">Comma-separated — AI will rephrase around these</div>
+              <input type="text" id="settingsTriggerWords" class="settings-input"
+                placeholder="e.g. failure, should, weakness">
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Your values &amp; goals</label>
+              <textarea id="settingsValues" class="settings-textarea" rows="3"
+                placeholder="e.g. connection, clarity, reduce anxiety"></textarea>
+            </div>
+            <button class="settings-save-btn" onclick="savePrefs()">Save preferences</button>
+          </div>
+        </div>
+
+        <!-- Notifications (Premium) -->
+        <div class="settings-section">
+          <div class="settings-section-title">
+            Notifications
+            <span class="premium-label">Premium</span>
+          </div>
+          <div class="notif-block" id="notifBlock">
+            <div class="settings-field" id="reminderPrefSection">
+              <label class="settings-field-label">Daily reminder</label>
+              <div class="reminder-row">
+                <label class="toggle-label">
+                  <input type="checkbox" id="reminderToggle" onchange="toggleReminder()">
+                  <span class="toggle-switch"></span>
+                  <span class="toggle-text">Enabled</span>
+                </label>
+                <input type="time" id="reminderTime" class="time-input" value="20:00" style="display:none;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+          <div class="about-block">
+            <p class="about-text">
+              mentalmind is a personal reflection tool built to help you journal freely, notice patterns, and process your thoughts — with a little help from AI.<br><br>
+              This is not a therapy service. In a crisis, please contact <a href="tel:988">988</a> (US), <a href="tel:116123">116 123</a> (Samaritans UK), or <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a>.
+            </p>
+            <p class="about-version">v0.1.0 — built with FastAPI &amp; vanilla JS</p>
+          </div>
+        </div>
+
+      </div><!-- /page-settings -->
+
+    </div><!-- /page-content -->
+  </div><!-- /content-area -->
+</div><!-- /app-layout -->
+
+<!-- ── Bottom Nav (mobile) ── -->
+<nav class="bottom-nav" role="navigation" aria-label="Mobile navigation">
+  <button class="bottom-nav-item active" data-page="journal" onclick="navigateTo('journal')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Write
+  </button>
+  <button class="bottom-nav-item" data-page="history" onclick="navigateTo('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    History
+  </button>
+  <button class="bottom-nav-item" data-page="insights" onclick="navigateTo('insights')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Insights
+  </button>
+  <button class="bottom-nav-item" data-page="tasks" onclick="navigateTo('tasks')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Steps
+  </button>
+  <button class="bottom-nav-item" data-page="settings" onclick="navigateTo('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
+</nav>
+
+<script src="script.js"></script>
+</body>
+</html>
